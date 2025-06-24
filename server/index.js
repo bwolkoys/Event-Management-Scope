@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 app.use(cors());
 app.use(express.json());
@@ -199,20 +199,20 @@ app.delete('/api/events/:id', async (req, res) => {
 
 app.get('/api/teams', (req, res) => {
   const teams = [
-    { id: 'team1', name: 'Development Team' },
-    { id: 'team2', name: 'Marketing Team' },
-    { id: 'team3', name: 'Sales Team' },
-    { id: 'team4', name: 'HR Team' }
+    { id: 'team1', name: 'West Ham United' },
+    { id: 'team2', name: 'Arsenal' },
+    { id: 'team3', name: 'Brentford' },
+    { id: 'team4', name: 'Chelsea' }
   ];
   res.json(teams);
 });
 
 app.get('/api/users', (req, res) => {
   const users = [
-    { id: 'user1', name: 'John Doe', email: 'john@example.com' },
-    { id: 'user2', name: 'Jane Smith', email: 'jane@example.com' },
-    { id: 'user3', name: 'Mike Johnson', email: 'mike@example.com' },
-    { id: 'user4', name: 'Sarah Wilson', email: 'sarah@example.com' }
+    { id: 'user1', name: 'Jarrod Bowen', email: 'jarrod@example.com', teamId: 'team1' },
+    { id: 'user2', name: 'Michail Antonio', email: 'michail@example.com', teamId: 'team2' },
+    { id: 'user3', name: 'Edson Alvarez', email: 'edson@example.com', teamId: 'team3' },
+    { id: 'user4', name: 'Maxwel Cornet', email: 'Maxwel@example.com', teamId: 'team4' }
   ];
   res.json(users);
 });

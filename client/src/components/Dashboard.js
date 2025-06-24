@@ -6,6 +6,7 @@ function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
     loadEvents();
@@ -23,11 +24,13 @@ function Dashboard() {
   };
 
   const handleOpenModal = () => {
+    setSelectedEvent(null);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setSelectedEvent(null);
   };
 
   const handleEventCreated = (event) => {
@@ -36,8 +39,21 @@ function Dashboard() {
     setIsModalOpen(false);
   };
 
+  const handleEventUpdated = (updatedEvent) => {
+    console.log('Event updated:', updatedEvent);
+    setEvents(prev => prev.map(event => 
+      event._id === updatedEvent._id ? updatedEvent : event
+    ));
+    setIsModalOpen(false);
+    setSelectedEvent(null);
+  };
+
   const handleUpdateEvent = (eventId) => {
-    console.log('Update event:', eventId);
+    const eventToUpdate = events.find(event => event._id === eventId);
+    if (eventToUpdate) {
+      setSelectedEvent(eventToUpdate);
+      setIsModalOpen(true);
+    }
   };
 
   const handleDeleteEvent = async (eventId) => {
@@ -242,6 +258,8 @@ function Dashboard() {
         <CreateEventModal
           onClose={handleCloseModal}
           onEventCreated={handleEventCreated}
+          onEventUpdated={handleEventUpdated}
+          selectedEvent={selectedEvent}
         />
       )}
     </div>

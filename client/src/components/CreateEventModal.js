@@ -4,7 +4,8 @@ import LocationAutocomplete from './LocationAutocomplete';
 import GuestSelector from './GuestSelector';
 import moment from 'moment-timezone';
 
-const CreateEventModal = ({ onClose, onEventCreated }) => {
+const CreateEventModal = ({ onClose, onEventCreated, onEventUpdated, selectedEvent }) => {
+  const isEditing = !!selectedEvent;
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -45,14 +46,55 @@ const CreateEventModal = ({ onClose, onEventCreated }) => {
     loadTeamsAndUsers();
   }, []);
 
+  useEffect(() => {
+    if (selectedEvent) {
+      const startDateTime = moment(selectedEvent.startDate);
+      const endDateTime = moment(selectedEvent.endDate);
+      
+      setFormData({
+        title: selectedEvent.title || '',
+        description: selectedEvent.description || '',
+        startDate: startDateTime.format('YYYY-MM-DD'),
+        startTime: startDateTime.format('HH:mm'),
+        endDate: endDateTime.format('YYYY-MM-DD'),
+        endTime: endDateTime.format('HH:mm'),
+        timezone: selectedEvent.timezone || moment.tz.guess(),
+        location: selectedEvent.location || {
+          address: '',
+          placeId: '',
+          coordinates: { lat: null, lng: null }
+        },
+        team: selectedEvent.team || '',
+        guests: selectedEvent.guests || [],
+        recurring: selectedEvent.recurring || {
+          enabled: false,
+          frequency: 'weekly',
+          interval: 1,
+          endDate: ''
+        },
+        rsvpRequired: selectedEvent.rsvpRequired || false,
+        notifications: selectedEvent.notifications || {
+          email: true,
+          reminder: '1day'
+        },
+        privacy: selectedEvent.privacy || 'team'
+      });
+    }
+  }, [selectedEvent]);
+
   const loadTeamsAndUsers = async () => {
     try {
+      console.log('Loading teams and users...');
       const [teamsResponse, usersResponse] = await Promise.all([
         teamsAPI.getTeams(),
         usersAPI.getUsers()
       ]);
+      console.log('Teams response:', teamsResponse);
+      console.log('Users response:', usersResponse);
       setTeams(teamsResponse.data);
       setUsers(usersResponse.data);
+      console.log('Teams set:', teamsResponse.data);
+      console.log('Users set:', usersResponse.data);
     } catch (error) {
       console.error('Error loading teams and users:', error);
     }
@@ -185,12 +227,18 @@ const CreateEventModal = ({ onClose, onEventCreated }) => {
         privacy: formData.privacy
       };
 
-      const response = await eventAPI.createEvent(eventData);
-      onEventCreated(response.data);
+      let response;
+      if (isEditing) {
+        response = await eventAPI.updateEvent(selectedEvent._id, eventData);
+        onEventUpdated(response.data);
+      } else {
+        response = await eventAPI.createEvent(eventData);
+        onEventCreated(response.data);
+      }
     } catch (error) {
-      console.error('Error creating event:', error);
+      console.error(`Error ${isEditing ? 'updating' : 'creating'} event:`, error);
       setErrors({ 
-        submit: 'Failed to create event. Please try again.' 
+        submit: `Failed to ${isEditing ? 'update' : 'create'} event. Please try again.` 
       });
     } finally {
       setIsSubmitting(false);
@@ -207,7 +255,7 @@ const CreateEventModal = ({ onClose, onEventCreated }) => {
     <div className="modal-overlay" onClick={handleOverlayClick}>
       <div className="modal-content">
         <div className="modal-header">
-          <h2>Create New Event</h2>
+          <h2>{isEditing ? 'Update Event' : 'Create New Event'}</h2>
           <button 
             className="close-button"
             onClick={onClose}
@@ -319,6 +367,7 @@ const CreateEventModal = ({ onClose, onEventCreated }) => {
               <LocationAutocomplete
                 onLocationSelect={handleLocationSelect}
                 placeholder="Search for a location"
+                initialValue={selectedEvent?.location?.address || ''}
               />
               {formData.location.address && (
                 <div style={{ marginTop: '5px', fontSize: '12px', color: '#666' }}>
@@ -336,19 +385,20 @@ const CreateEventModal = ({ onClose, onEventCreated }) => {
                 onChange={handleChange}
               >
                 <option value="">Select a team</option>
-                {teams.map(team => (
+                {teams && teams.length > 0 ? teams.map(team => (
                   <option key={team.id} value={team.id}>
                     {team.name}
                   </option>
-                ))}
+                )) : <option disabled>Loading teams...</option>}
               </select>
               {errors.team && <div className="error-message">{errors.team}</div>}
             </div>
 
             <div className="form-group">
               <label>Guests</label>
+              {console.log('Rendering GuestSelector with users:', users)}
               <GuestSelector
-                users={users}
+                users={users || []}
                 selectedGuests={formData.guests}
                 onGuestsChange={handleGuestsChange}
               />
@@ -498,7 +548,7 @@ const CreateEventModal = ({ onClose, onEventCreated }) => {
                 className="btn btn-primary"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Creating...' : 'Create Event'}
+                {isSubmitting ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update Event' : 'Create Event')}
               </button>
             </div>
           </form>
