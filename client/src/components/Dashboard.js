@@ -7,6 +7,7 @@ function Dashboard() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     loadEvents();
@@ -72,6 +73,10 @@ function Dashboard() {
     const date = new Date(dateString);
     return date.toLocaleString();
   };
+
+  const filteredEvents = events.filter(event =>
+    event.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="dashboard" style={{ padding: '40px', minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
@@ -155,11 +160,37 @@ function Dashboard() {
             Your Events
           </h2>
           
+          <div style={{ 
+            maxWidth: '600px', 
+            margin: '0 auto 30px auto',
+            textAlign: 'center'
+          }}>
+            <input
+              type="text"
+              placeholder="Search events by title..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px 20px',
+                fontSize: '16px',
+                border: '2px solid #e9ecef',
+                borderRadius: '8px',
+                outline: 'none',
+                transition: 'border-color 0.3s ease',
+                backgroundColor: 'white',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#007bff'}
+              onBlur={(e) => e.target.style.borderColor = '#e9ecef'}
+            />
+          </div>
+          
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px' }}>
               <p>Loading events...</p>
             </div>
-          ) : events.length === 0 ? (
+          ) : filteredEvents.length === 0 ? (
             <div style={{ 
               textAlign: 'center', 
               padding: '40px',
@@ -168,7 +199,10 @@ function Dashboard() {
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}>
               <p style={{ color: '#6c757d', fontSize: '1.1rem' }}>
-                No events created yet. Click "Create New Event" to get started!
+                {events.length === 0 
+                  ? "No events created yet. Click \"Create New Event\" to get started!"
+                  : "No events match your search. Try a different search term."
+                }
               </p>
             </div>
           ) : (
@@ -177,7 +211,7 @@ function Dashboard() {
               gap: '20px',
               gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))'
             }}>
-              {events.map(event => (
+              {filteredEvents.map(event => (
                 <div key={event._id} style={{
                   backgroundColor: 'white',
                   padding: '20px',
