@@ -131,9 +131,6 @@ const CreateEventModal = ({ onClose, onEventCreated }) => {
       newErrors.endTime = 'End time is required';
     }
 
-    if (!formData.team) {
-      newErrors.team = 'Team selection is required';
-    }
 
     if (formData.startDate && formData.startTime && formData.endDate && formData.endTime) {
       const startDateTime = moment.tz(`${formData.startDate} ${formData.startTime}`, formData.timezone);
@@ -331,7 +328,7 @@ const CreateEventModal = ({ onClose, onEventCreated }) => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="team">Team/Group *</label>
+              <label htmlFor="team">Team/Group</label>
               <select
                 id="team"
                 name="team"

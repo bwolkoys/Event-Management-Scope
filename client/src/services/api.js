@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -12,6 +12,8 @@ const api = axios.create({
 export const eventAPI = {
   createEvent: (eventData) => api.post('/events', eventData),
   getEvents: () => api.get('/events'),
+  updateEvent: (id, eventData) => api.put(`/events/${id}`, eventData),
+  deleteEvent: (id) => api.delete(`/events/${id}`),
 };
 
 export const teamsAPI = {

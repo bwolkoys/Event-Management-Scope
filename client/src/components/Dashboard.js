@@ -1,8 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CreateEventModal from './CreateEventModal';
+import { eventAPI } from '../services/api';
 
 function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  const loadEvents = async () => {
+    try {
+      const response = await eventAPI.getEvents();
+      setEvents(response.data);
+    } catch (error) {
+      console.error('Error loading events:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleOpenModal = () => {
     setIsModalOpen(true);
@@ -14,7 +32,29 @@ function Dashboard() {
 
   const handleEventCreated = (event) => {
     console.log('Event created:', event);
+    setEvents(prev => [...prev, event]);
     setIsModalOpen(false);
+  };
+
+  const handleUpdateEvent = (eventId) => {
+    console.log('Update event:', eventId);
+  };
+
+  const handleDeleteEvent = async (eventId) => {
+    if (window.confirm('Are you sure you want to delete this event?')) {
+      try {
+        await eventAPI.deleteEvent(eventId);
+        setEvents(prev => prev.filter(event => event._id !== eventId));
+      } catch (error) {
+        console.error('Error deleting event:', error);
+        alert('Failed to delete event. Please try again.');
+      }
+    }
+  };
+
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleString();
   };
 
   return (
@@ -86,6 +126,115 @@ function Dashboard() {
           >
             Analytics & Reports
           </button>
+        </div>
+
+        {/* Events Display Section */}
+        <div style={{ marginTop: '50px' }}>
+          <h2 style={{ 
+            fontSize: '1.8rem', 
+            color: '#2c3e50', 
+            marginBottom: '30px',
+            textAlign: 'center'
+          }}>
+            Your Events
+          </h2>
+          
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <p>Loading events...</p>
+            </div>
+          ) : events.length === 0 ? (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '40px',
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}>
+              <p style={{ color: '#6c757d', fontSize: '1.1rem' }}>
+                No events created yet. Click "Create New Event" to get started!
+              </p>
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gap: '20px',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))'
+            }}>
+              {events.map(event => (
+                <div key={event._id} style={{
+                  backgroundColor: 'white',
+                  padding: '20px',
+                  borderRadius: '8px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  border: '1px solid #e9ecef'
+                }}>
+                  <h3 style={{ 
+                    margin: '0 0 10px 0', 
+                    color: '#2c3e50',
+                    fontSize: '1.3rem'
+                  }}>
+                    {event.title}
+                  </h3>
+                  <p style={{ 
+                    margin: '0 0 15px 0', 
+                    color: '#6c757d',
+                    lineHeight: '1.4'
+                  }}>
+                    {event.description}
+                  </p>
+                  <p style={{ 
+                    margin: '0 0 20px 0', 
+                    color: '#495057',
+                    fontSize: '0.9rem',
+                    fontWeight: '500'
+                  }}>
+                    <strong>Time:</strong> {formatDateTime(event.startDate)}
+                  </p>
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '10px',
+                    justifyContent: 'flex-end'
+                  }}>
+                    <button
+                      onClick={() => handleUpdateEvent(event._id)}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#28a745',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        fontWeight: '500'
+                      }}
+                      onMouseOver={(e) => e.target.style.backgroundColor = '#218838'}
+                      onMouseOut={(e) => e.target.style.backgroundColor = '#28a745'}
+                    >
+                      Update
+                    </button>
+                    <button
+                      onClick={() => handleDeleteEvent(event._id)}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        fontWeight: '500'
+                      }}
+                      onMouseOver={(e) => e.target.style.backgroundColor = '#c82333'}
+                      onMouseOut={(e) => e.target.style.backgroundColor = '#dc3545'}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

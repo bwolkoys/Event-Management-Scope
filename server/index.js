@@ -40,7 +40,7 @@ const eventSchema = new mongoose.Schema({
   },
   team: {
     type: String,
-    required: true
+    required: false
   },
   guests: [{
     type: {
@@ -113,7 +113,7 @@ app.post('/api/events', async (req, res) => {
       privacy
     } = req.body;
 
-    if (!title || !description || !startDate || !endDate || !timezone || !team) {
+    if (!title || !description || !startDate || !endDate || !timezone) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -147,6 +147,53 @@ app.get('/api/events', async (req, res) => {
   } catch (error) {
     console.error('Error fetching events:', error);
     res.status(500).json({ error: 'Failed to fetch events' });
+  }
+});
+
+app.put('/api/events/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    if (updateData.startDate) {
+      updateData.startDate = new Date(updateData.startDate);
+    }
+    if (updateData.endDate) {
+      updateData.endDate = new Date(updateData.endDate);
+    }
+    if (updateData.recurring && updateData.recurring.endDate) {
+      updateData.recurring.endDate = new Date(updateData.recurring.endDate);
+    }
+
+    const updatedEvent = await Event.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true
+    });
+
+    if (!updatedEvent) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    res.json(updatedEvent);
+  } catch (error) {
+    console.error('Error updating event:', error);
+    res.status(500).json({ error: 'Failed to update event' });
+  }
+});
+
+app.delete('/api/events/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedEvent = await Event.findByIdAndDelete(id);
+
+    if (!deletedEvent) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    res.json({ message: 'Event deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting event:', error);
+    res.status(500).json({ error: 'Failed to delete event' });
   }
 });
 
