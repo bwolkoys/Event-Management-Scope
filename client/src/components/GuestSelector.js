@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const GuestSelector = ({ users, selectedGuests, onGuestsChange }) => {
+const GuestSelector = ({ users, selectedGuests, onGuestsChange, selectedTeamId }) => {
   const [activeTab, setActiveTab] = useState('users');
   const [externalGuestForm, setExternalGuestForm] = useState({
     name: '',
@@ -105,16 +105,30 @@ const GuestSelector = ({ users, selectedGuests, onGuestsChange }) => {
 
       {activeTab === 'users' && (
         <div>
+          {selectedTeamId && (
+            <div style={{ 
+              fontSize: '13px', 
+              color: '#666', 
+              marginBottom: '10px',
+              padding: '8px',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '4px',
+              border: '1px solid #e9ecef'
+            }}>
+              Team members are automatically selected. You can uncheck any member to remove them from the event.
+            </div>
+          )}
           <div className="guest-list">
             {users.map(user => {
               const isSelected = selectedGuests.some(guest => 
                 guest.type === 'user' && guest.id === user.id
               );
+              const isTeamMember = selectedTeamId && user.teamId === selectedTeamId;
               
               return (
                 <div
                   key={user.id}
-                  className="guest-item"
+                  className={`guest-item ${isTeamMember ? 'team-member' : ''}`}
                   onClick={() => handleUserToggle(user)}
                 >
                   <input
@@ -124,7 +138,19 @@ const GuestSelector = ({ users, selectedGuests, onGuestsChange }) => {
                     onClick={(e) => e.stopPropagation()}
                   />
                   <div className="guest-info">
-                    <div className="guest-name">{user.name}</div>
+                    <div className="guest-name">
+                      {user.name}
+                      {isTeamMember && (
+                        <span style={{
+                          fontSize: '11px',
+                          color: '#28a745',
+                          marginLeft: '8px',
+                          fontWeight: 'bold'
+                        }}>
+                          (Team Member)
+                        </span>
+                      )}
+                    </div>
                     <div className="guest-email">{user.email}</div>
                   </div>
                 </div>

@@ -166,6 +166,15 @@ code {
   background-color: #f8f9fa;
 }
 
+.guest-item.team-member {
+  background-color: #e8f5e8;
+  border-left: 3px solid #28a745;
+}
+
+.guest-item.team-member:hover {
+  background-color: #d4edda;
+}
+
 .guest-item:last-child {
   border-bottom: none;
 }

@@ -115,6 +115,44 @@ const CreateEventModal = ({ onClose, onEventCreated, onEventUpdated, selectedEve
     }
   };
 
+  const handleTeamChange = (e) => {
+    const selectedTeamId = e.target.value;
+    
+    setFormData(prev => ({
+      ...prev,
+      team: selectedTeamId
+    }));
+    
+    if (selectedTeamId && users.length > 0) {
+      const teamMembers = users.filter(user => user.teamId === selectedTeamId);
+      const teamMemberGuests = teamMembers.map(user => ({
+        type: 'user',
+        id: user.id,
+        name: user.name,
+        email: user.email
+      }));
+      
+      const externalGuests = formData.guests.filter(guest => guest.type === 'external');
+      setFormData(prev => ({
+        ...prev,
+        guests: [...externalGuests, ...teamMemberGuests]
+      }));
+    } else if (!selectedTeamId) {
+      const externalGuests = formData.guests.filter(guest => guest.type === 'external');
+      setFormData(prev => ({
+        ...prev,
+        guests: externalGuests
+      }));
+    }
+    
+    if (errors.team) {
+      setErrors(prev => ({
+        ...prev,
+        team: ''
+      }));
+    }
+  };
+
   const handleLocationSelect = (location) => {
     setFormData(prev => ({
       ...prev,
@@ -382,7 +420,7 @@ const CreateEventModal = ({ onClose, onEventCreated, onEventUpdated, selectedEve
                 id="team"
                 name="team"
                 value={formData.team}
-                onChange={handleChange}
+                onChange={handleTeamChange}
               >
                 <option value="">Select a team</option>
                 {teams && teams.length > 0 ? teams.map(team => (
@@ -401,6 +439,7 @@ const CreateEventModal = ({ onClose, onEventCreated, onEventUpdated, selectedEve
                 users={users || []}
                 selectedGuests={formData.guests}
                 onGuestsChange={handleGuestsChange}
+                selectedTeamId={formData.team}
               />
             </div>
 
