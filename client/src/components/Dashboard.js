@@ -207,6 +207,11 @@ function Dashboard() {
     const matchesMyEvents = !filters.myEventsOnly || true;
     
     return matchesSearch && matchesTeam && matchesEventType && matchesDateRange && matchesMyEvents;
+  }).sort((a, b) => {
+    // Sort by date and time in ascending order (soonest first)
+    const dateA = new Date(a.startDate);
+    const dateB = new Date(b.startDate);
+    return dateA - dateB;
   });
 
   return (
@@ -260,24 +265,6 @@ function Dashboard() {
             Create New Event
           </button>
           
-          <button
-            style={{
-              padding: '15px 30px',
-              backgroundColor: '#478c66',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              cursor: 'pointer',
-              fontWeight: '500',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              transition: 'all 0.3s ease'
-            }}
-            onMouseOver={(e) => e.target.style.backgroundColor = '#3a7257'}
-            onMouseOut={(e) => e.target.style.backgroundColor = '#478c66'}
-          >
-            View Events
-          </button>
           
           <button
             onClick={toggleDeletedEvents}
@@ -514,7 +501,9 @@ function Dashboard() {
               <div style={{
                 display: 'grid',
                 gap: '20px',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))'
+                gridTemplateColumns: '1fr',
+                width: '60%',
+                margin: '0 auto'
               }}>
                 {deletedEvents.map(event => (
                   <div key={event._id} style={{
@@ -613,7 +602,9 @@ function Dashboard() {
             <div style={{
               display: 'grid',
               gap: '20px',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))'
+              gridTemplateColumns: '1fr',
+              width: '60%',
+              margin: '0 auto'
             }}>
               {filteredEvents.map(event => (
                 <div key={event._id} style={{
