@@ -14,6 +14,8 @@ export const eventAPI = {
   getEvents: () => api.get('/events'),
   updateEvent: (id, eventData) => api.put(`/events/${id}`, eventData),
   deleteEvent: (id) => api.delete(`/events/${id}`),
+  getDeletedEvents: () => api.get('/events/deleted'),
+  recoverEvent: (id) => api.post(`/events/${id}/recover`),
 };
 
 export const teamsAPI = {

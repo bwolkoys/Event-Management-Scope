@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import CreateEventModal from './CreateEventModal';
 import EventDetailsModal from './EventDetailsModal';
-import { eventAPI } from '../services/api';
+import { eventAPI, teamsAPI, usersAPI } from '../services/api';
 
 function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -11,9 +11,20 @@ function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedEventForDetails, setSelectedEventForDetails] = useState(null);
+  const [teams, setTeams] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [filters, setFilters] = useState({
+    team: '',
+    eventType: '',
+    dateRange: '',
+    myEventsOnly: false
+  });
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [deletedEvents, setDeletedEvents] = useState([]);
 
   useEffect(() => {
     loadEvents();
+    loadTeamsAndUsers();
   }, []);
 
   const loadEvents = async () => {
@@ -24,6 +35,19 @@ function Dashboard() {
       console.error('Error loading events:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTeamsAndUsers = async () => {
+    try {
+      const [teamsResponse, usersResponse] = await Promise.all([
+        teamsAPI.getTeams(),
+        usersAPI.getUsers()
+      ]);
+      setTeams(teamsResponse.data);
+      setUsers(usersResponse.data);
+    } catch (error) {
+      console.error('Error loading teams and users:', error);
     }
   };
 
@@ -61,14 +85,46 @@ function Dashboard() {
   };
 
   const handleDeleteEvent = async (eventId) => {
-    if (window.confirm('Are you sure you want to delete this event?')) {
+    if (window.confirm('Are you sure you want to delete this event? You can recover it within 24 hours.')) {
       try {
         await eventAPI.deleteEvent(eventId);
         setEvents(prev => prev.filter(event => event._id !== eventId));
+        if (showDeleted) {
+          loadDeletedEvents();
+        }
       } catch (error) {
         console.error('Error deleting event:', error);
         alert('Failed to delete event. Please try again.');
       }
+    }
+  };
+
+  const loadDeletedEvents = async () => {
+    try {
+      const response = await eventAPI.getDeletedEvents();
+      setDeletedEvents(response.data);
+    } catch (error) {
+      console.error('Error loading deleted events:', error);
+    }
+  };
+
+  const handleRecoverEvent = async (eventId) => {
+    if (window.confirm('Are you sure you want to recover this event?')) {
+      try {
+        await eventAPI.recoverEvent(eventId);
+        setDeletedEvents(prev => prev.filter(event => event._id !== eventId));
+        loadEvents();
+      } catch (error) {
+        console.error('Error recovering event:', error);
+        alert('Failed to recover event. Please try again.');
+      }
+    }
+  };
+
+  const toggleDeletedEvents = () => {
+    setShowDeleted(!showDeleted);
+    if (!showDeleted) {
+      loadDeletedEvents();
     }
   };
 
@@ -87,9 +143,71 @@ function Dashboard() {
     setSelectedEventForDetails(null);
   };
 
-  const filteredEvents = events.filter(event =>
-    event.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleFilterChange = (filterType, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      team: '',
+      eventType: '',
+      dateRange: '',
+      myEventsOnly: false
+    });
+    setSearchTerm('');
+  };
+
+  const filteredEvents = events.filter(event => {
+    // Search term filter
+    const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         event.description.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Team filter
+    const matchesTeam = !filters.team || event.team === filters.team;
+    
+    // Event type filter (based on privacy setting)
+    const matchesEventType = !filters.eventType || event.privacy === filters.eventType;
+    
+    // Date range filter
+    let matchesDateRange = true;
+    if (filters.dateRange) {
+      const eventDate = new Date(event.startDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      switch (filters.dateRange) {
+        case 'today':
+          const todayEnd = new Date(today);
+          todayEnd.setHours(23, 59, 59, 999);
+          matchesDateRange = eventDate >= today && eventDate <= todayEnd;
+          break;
+        case 'week':
+          const weekEnd = new Date(today);
+          weekEnd.setDate(today.getDate() + 7);
+          matchesDateRange = eventDate >= today && eventDate <= weekEnd;
+          break;
+        case 'month':
+          const monthEnd = new Date(today);
+          monthEnd.setMonth(today.getMonth() + 1);
+          matchesDateRange = eventDate >= today && eventDate <= monthEnd;
+          break;
+        case 'past':
+          matchesDateRange = eventDate < today;
+          break;
+        default:
+          matchesDateRange = true;
+      }
+    }
+    
+    // My events filter (this would need user authentication to work properly)
+    // For now, we'll assume all events are "mine" since there's no user context
+    const matchesMyEvents = !filters.myEventsOnly || true;
+    
+    return matchesSearch && matchesTeam && matchesEventType && matchesDateRange && matchesMyEvents;
+  });
 
   return (
     <div className="dashboard" style={{ padding: '40px', minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
@@ -158,7 +276,27 @@ function Dashboard() {
             onMouseOver={(e) => e.target.style.backgroundColor = '#e0a800'}
             onMouseOut={(e) => e.target.style.backgroundColor = '#ffc107'}
           >
-            Analytics & Reports
+            View Events
+          </button>
+          
+          <button
+            onClick={toggleDeletedEvents}
+            style={{
+              padding: '15px 30px',
+              backgroundColor: showDeleted ? '#6c757d' : '#17a2b8',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              cursor: 'pointer',
+              fontWeight: '500',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseOver={(e) => e.target.style.backgroundColor = showDeleted ? '#5a6268' : '#138496'}
+            onMouseOut={(e) => e.target.style.backgroundColor = showDeleted ? '#6c757d' : '#17a2b8'}
+          >
+            {showDeleted ? 'Show Active Events' : 'View Deleted Events'}
           </button>
         </div>
 
@@ -170,39 +308,292 @@ function Dashboard() {
             marginBottom: '30px',
             textAlign: 'center'
           }}>
-            Your Events
+            {showDeleted ? 'Recently Deleted Events' : 'Your Events'}
           </h2>
           
-          <div style={{ 
-            maxWidth: '600px', 
-            margin: '0 auto 30px auto',
-            textAlign: 'center'
-          }}>
-            <input
-              type="text"
-              placeholder="Search events by title..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px 20px',
-                fontSize: '16px',
-                border: '2px solid #e9ecef',
-                borderRadius: '8px',
-                outline: 'none',
-                transition: 'border-color 0.3s ease',
-                backgroundColor: 'white',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#007bff'}
-              onBlur={(e) => e.target.style.borderColor = '#e9ecef'}
-            />
-          </div>
+          {!showDeleted && (
+            <div style={{ 
+              maxWidth: '1000px', 
+              margin: '0 auto 30px auto',
+              backgroundColor: 'white',
+              padding: '25px',
+              borderRadius: '12px',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+            }}>
+              {/* Search Input */}
+              <div style={{ marginBottom: '20px' }}>
+                <input
+                  type="text"
+                  placeholder="Search events by title or description..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 20px',
+                    fontSize: '16px',
+                    border: '2px solid #e9ecef',
+                    borderRadius: '8px',
+                    outline: 'none',
+                    transition: 'border-color 0.3s ease',
+                    backgroundColor: 'white',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#007bff'}
+                  onBlur={(e) => e.target.style.borderColor = '#e9ecef'}
+                />
+              </div>
+              
+              {/* Filter Controls */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '15px',
+                alignItems: 'end'
+              }}>
+                {/* Team Filter */}
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '5px', 
+                    fontWeight: '500', 
+                    color: '#495057' 
+                  }}>
+                    Filter by Team
+                  </label>
+                  <select
+                    value={filters.team}
+                    onChange={(e) => handleFilterChange('team', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      fontSize: '14px',
+                      border: '1px solid #e9ecef',
+                      borderRadius: '6px',
+                      backgroundColor: 'white',
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="">All Teams</option>
+                    {teams.map(team => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* Event Type Filter */}
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '5px', 
+                    fontWeight: '500', 
+                    color: '#495057' 
+                  }}>
+                    Event Type
+                  </label>
+                  <select
+                    value={filters.eventType}
+                    onChange={(e) => handleFilterChange('eventType', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      fontSize: '14px',
+                      border: '1px solid #e9ecef',
+                      borderRadius: '6px',
+                      backgroundColor: 'white',
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="">All Types</option>
+                    <option value="team">Team Only</option>
+                    <option value="public">Public</option>
+                  </select>
+                </div>
+                
+                {/* Date Range Filter */}
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '5px', 
+                    fontWeight: '500', 
+                    color: '#495057' 
+                  }}>
+                    Date Range
+                  </label>
+                  <select
+                    value={filters.dateRange}
+                    onChange={(e) => handleFilterChange('dateRange', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      fontSize: '14px',
+                      border: '1px solid #e9ecef',
+                      borderRadius: '6px',
+                      backgroundColor: 'white',
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="">All Dates</option>
+                    <option value="today">Today</option>
+                    <option value="week">Next 7 Days</option>
+                    <option value="month">Next 30 Days</option>
+                    <option value="past">Past Events</option>
+                  </select>
+                </div>
+                
+                {/* My Events Toggle */}
+                <div>
+                  <label style={{ 
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontWeight: '500', 
+                    color: '#495057',
+                    cursor: 'pointer',
+                    padding: '8px 0'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={filters.myEventsOnly}
+                      onChange={(e) => handleFilterChange('myEventsOnly', e.target.checked)}
+                      style={{ 
+                        width: '16px', 
+                        height: '16px',
+                        cursor: 'pointer'
+                      }}
+                    />
+                    My Events Only
+                  </label>
+                </div>
+                
+                {/* Clear Filters Button */}
+                <div>
+                  <button
+                    onClick={clearFilters}
+                    style={{
+                      width: '100%',
+                      padding: '8px 16px',
+                      backgroundColor: '#6c757d',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      transition: 'background-color 0.3s ease'
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = '#5a6268'}
+                    onMouseOut={(e) => e.target.style.backgroundColor = '#6c757d'}
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px' }}>
               <p>Loading events...</p>
             </div>
+          ) : showDeleted ? (
+            deletedEvents.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '40px',
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}>
+                <p style={{ color: '#6c757d', fontSize: '1.1rem' }}>
+                  No recently deleted events. Deleted events are automatically removed after 24 hours.
+                </p>
+              </div>
+            ) : (
+              <div style={{
+                display: 'grid',
+                gap: '20px',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))'
+              }}>
+                {deletedEvents.map(event => (
+                  <div key={event._id} style={{
+                    backgroundColor: '#fff3cd',
+                    padding: '20px',
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    border: '1px solid #ffeaa7'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                      <span style={{ 
+                        backgroundColor: '#f39c12', 
+                        color: 'white', 
+                        padding: '4px 8px', 
+                        borderRadius: '4px', 
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        marginRight: '10px'
+                      }}>
+                        DELETED
+                      </span>
+                      <h3 style={{ 
+                        margin: '0', 
+                        color: '#2c3e50',
+                        fontSize: '1.3rem'
+                      }}>
+                        {event.title}
+                      </h3>
+                    </div>
+                    <p style={{ 
+                      margin: '0 0 15px 0', 
+                      color: '#6c757d',
+                      lineHeight: '1.4'
+                    }}>
+                      {event.description}
+                    </p>
+                    <p style={{ 
+                      margin: '0 0 10px 0', 
+                      color: '#495057',
+                      fontSize: '0.9rem',
+                      fontWeight: '500'
+                    }}>
+                      <strong>Original Time:</strong> {formatDateTime(event.startDate)}
+                    </p>
+                    <p style={{ 
+                      margin: '0 0 20px 0', 
+                      color: '#dc3545',
+                      fontSize: '0.9rem',
+                      fontWeight: '500'
+                    }}>
+                      <strong>Deleted:</strong> {formatDateTime(event.deletedAt)}
+                    </p>
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '10px',
+                      justifyContent: 'flex-end'
+                    }}>
+                      <button
+                        onClick={() => handleRecoverEvent(event._id)}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#28a745',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                          fontWeight: '500'
+                        }}
+                        onMouseOver={(e) => e.target.style.backgroundColor = '#218838'}
+                        onMouseOut={(e) => e.target.style.backgroundColor = '#28a745'}
+                      >
+                        Recover Event
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
           ) : filteredEvents.length === 0 ? (
             <div style={{ 
               textAlign: 'center', 
@@ -291,7 +682,7 @@ function Dashboard() {
                       onMouseOver={(e) => e.target.style.backgroundColor = '#218838'}
                       onMouseOut={(e) => e.target.style.backgroundColor = '#28a745'}
                     >
-                      Update
+                      Edit
                     </button>
                     <button
                       onClick={() => handleDeleteEvent(event._id)}
@@ -324,6 +715,7 @@ function Dashboard() {
           onEventCreated={handleEventCreated}
           onEventUpdated={handleEventUpdated}
           selectedEvent={selectedEvent}
+          instanceDate={selectedEvent?.startDate}
         />
       )}
 

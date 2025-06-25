@@ -4,8 +4,10 @@ import LocationAutocomplete from './LocationAutocomplete';
 import GuestSelector from './GuestSelector';
 import moment from 'moment-timezone';
 
-const CreateEventModal = ({ onClose, onEventCreated, onEventUpdated, selectedEvent }) => {
+const CreateEventModal = ({ onClose, onEventCreated, onEventUpdated, selectedEvent, instanceDate }) => {
   const isEditing = !!selectedEvent;
+  const [showRecurringDialog, setShowRecurringDialog] = useState(false);
+  const [recurringUpdateType, setRecurringUpdateType] = useState('single');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -241,6 +243,19 @@ const CreateEventModal = ({ onClose, onEventCreated, onEventUpdated, selectedEve
       return;
     }
 
+    // Check if editing a recurring event
+    console.log('Debug - isEditing:', isEditing);
+    console.log('Debug - selectedEvent:', selectedEvent);
+    console.log('Debug - selectedEvent.recurring:', selectedEvent?.recurring);
+    console.log('Debug - selectedEvent.recurring.enabled:', selectedEvent?.recurring?.enabled);
+    console.log('Debug - showRecurringDialog:', showRecurringDialog);
+    
+    if (isEditing && selectedEvent.recurring && selectedEvent.recurring.enabled && !showRecurringDialog) {
+      console.log('Debug - Showing recurring dialog');
+      setShowRecurringDialog(true);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -265,14 +280,47 @@ const CreateEventModal = ({ onClose, onEventCreated, onEventUpdated, selectedEve
         privacy: formData.privacy
       };
 
+      // Add recurring update parameters if editing recurring event
+      if (isEditing && selectedEvent.recurring && selectedEvent.recurring.enabled) {
+        eventData.updateType = recurringUpdateType;
+        // Only send instanceDate for single instance updates
+        if (instanceDate && recurringUpdateType === 'single') {
+          eventData.instanceDate = instanceDate;
+        }
+      }
+
       let response;
       if (isEditing) {
         response = await eventAPI.updateEvent(selectedEvent._id, eventData);
+        
+        // Handle change tracking for notifications
+        if (response.data.changes && response.data.changes.length > 0) {
+          console.log('Event changes detected:', response.data.changes);
+          // Prepare notification data based on changes
+          const notificationData = {
+            eventId: response.data._id,
+            eventTitle: response.data.title,
+            changes: response.data.changes,
+            isRecurringException: response.data.isRecurringException || false,
+            timestamp: new Date().toISOString()
+          };
+          
+          // Store for future notification system integration
+          if (window.eventChangeNotifications) {
+            window.eventChangeNotifications.push(notificationData);
+          } else {
+            window.eventChangeNotifications = [notificationData];
+          }
+        }
+        
         onEventUpdated(response.data);
       } else {
         response = await eventAPI.createEvent(eventData);
         onEventCreated(response.data);
       }
+      
+      setShowRecurringDialog(false);
+      onClose();
     } catch (error) {
       console.error(`Error ${isEditing ? 'updating' : 'creating'} event:`, error);
       setErrors({ 
@@ -289,11 +337,77 @@ const CreateEventModal = ({ onClose, onEventCreated, onEventUpdated, selectedEve
     }
   };
 
+  console.log('Render - showRecurringDialog:', showRecurringDialog);
+  
   return (
-    <div className="modal-overlay" onClick={handleOverlayClick}>
-      <div className="modal-content">
+    <>
+      {showRecurringDialog && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowRecurringDialog(false)}>
+          <div className="modal-content" style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h3>Update Recurring Event</h3>
+              <button 
+                className="close-button"
+                onClick={() => setShowRecurringDialog(false)}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>This is a recurring event. How would you like to update it?</p>
+              <div style={{ margin: '20px 0' }}>
+                <div style={{ marginBottom: '10px' }}>
+                  <label>
+                    <input
+                      type="radio"
+                      value="single"
+                      checked={recurringUpdateType === 'single'}
+                      onChange={(e) => setRecurringUpdateType(e.target.value)}
+                      style={{ marginRight: '8px' }}
+                    />
+                    Update this event only
+                  </label>
+                </div>
+                <div style={{ marginBottom: '10px' }}>
+                  <label>
+                    <input
+                      type="radio"
+                      value="series"
+                      checked={recurringUpdateType === 'series'}
+                      onChange={(e) => setRecurringUpdateType(e.target.value)}
+                      style={{ marginRight: '8px' }}
+                    />
+                    Update all events in the series
+                  </label>
+                </div>
+              </div>
+              <div className="form-buttons">
+                <button 
+                  type="button" 
+                  className="btn btn-cancel"
+                  onClick={() => setShowRecurringDialog(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Updating...' : 'Update Event'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <div className="modal-overlay" onClick={handleOverlayClick}>
+        <div className="modal-content">
         <div className="modal-header">
-          <h2>{isEditing ? 'Update Event' : 'Create New Event'}</h2>
+          <h2>{isEditing ? 'Edit Event' : 'Create New Event'}</h2>
           <button 
             className="close-button"
             onClick={onClose}
@@ -594,6 +708,7 @@ const CreateEventModal = ({ onClose, onEventCreated, onEventUpdated, selectedEve
         </div>
       </div>
     </div>
+    </>
   );
 };
 

@@ -91,6 +91,27 @@ const eventSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  parentEventId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Event',
+    required: false
+  },
+  instanceDate: {
+    type: Date,
+    required: false
+  },
+  isException: {
+    type: Boolean,
+    default: false
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
+  deletedAt: {
+    type: Date,
+    required: false
   }
 });
 
@@ -142,7 +163,7 @@ app.post('/api/events', async (req, res) => {
 
 app.get('/api/events', async (req, res) => {
   try {
-    const events = await Event.find().sort({ createdAt: -1 });
+    const events = await Event.find({ isDeleted: { $ne: true } }).sort({ createdAt: -1 });
     res.json(events);
   } catch (error) {
     console.error('Error fetching events:', error);
@@ -150,11 +171,86 @@ app.get('/api/events', async (req, res) => {
   }
 });
 
+// Helper function to track changes between original and updated data
+function trackEventChanges(original, updated) {
+  const changes = [];
+  const fieldsToTrack = [
+    'title', 'description', 'startDate', 'endDate', 'timezone',
+    'location', 'team', 'guests', 'recurring', 'rsvpRequired', 'notifications', 'privacy'
+  ];
+
+  fieldsToTrack.forEach(field => {
+    const originalValue = original[field];
+    const updatedValue = updated[field];
+
+    // Handle nested objects and arrays
+    if (field === 'location') {
+      if (JSON.stringify(originalValue) !== JSON.stringify(updatedValue)) {
+        changes.push({
+          field: 'location',
+          oldValue: originalValue,
+          newValue: updatedValue,
+          changeType: 'location_changed'
+        });
+      }
+    } else if (field === 'guests') {
+      if (JSON.stringify(originalValue) !== JSON.stringify(updatedValue)) {
+        changes.push({
+          field: 'guests',
+          oldValue: originalValue,
+          newValue: updatedValue,
+          changeType: 'guests_changed'
+        });
+      }
+    } else if (field === 'recurring') {
+      if (JSON.stringify(originalValue) !== JSON.stringify(updatedValue)) {
+        changes.push({
+          field: 'recurring',
+          oldValue: originalValue,
+          newValue: updatedValue,
+          changeType: 'recurring_changed'
+        });
+      }
+    } else if (field === 'startDate' || field === 'endDate') {
+      // Handle date comparisons
+      const originalDate = originalValue ? new Date(originalValue).getTime() : null;
+      const updatedDate = updatedValue ? new Date(updatedValue).getTime() : null;
+      
+      if (originalDate !== updatedDate) {
+        changes.push({
+          field: field,
+          oldValue: originalValue,
+          newValue: updatedValue,
+          changeType: field === 'startDate' ? 'start_time_changed' : 'end_time_changed'
+        });
+      }
+    } else {
+      // Handle simple field comparisons
+      if (originalValue !== updatedValue) {
+        let changeType = `${field}_changed`;
+        if (field === 'title') changeType = 'title_changed';
+        else if (field === 'description') changeType = 'description_changed';
+        else if (field === 'team') changeType = 'team_changed';
+        
+        changes.push({
+          field: field,
+          oldValue: originalValue,
+          newValue: updatedValue,
+          changeType: changeType
+        });
+      }
+    }
+  });
+
+  return changes;
+}
+
 app.put('/api/events/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    const { updateType, instanceDate, ...updateData } = req.body;
 
+    // Convert date strings to Date objects
     if (updateData.startDate) {
       updateData.startDate = new Date(updateData.startDate);
     }
@@ -165,16 +261,52 @@ app.put('/api/events/:id', async (req, res) => {
       updateData.recurring.endDate = new Date(updateData.recurring.endDate);
     }
 
-    const updatedEvent = await Event.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true
-    });
-
-    if (!updatedEvent) {
+    const originalEvent = await Event.findById(id);
+    if (!originalEvent) {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    res.json(updatedEvent);
+    // Track changes for notification purposes
+    const changes = trackEventChanges(originalEvent.toObject(), updateData);
+
+    // Handle recurring event updates - only create exception for single instance updates
+    if (originalEvent.recurring && originalEvent.recurring.enabled && updateType === 'single' && instanceDate) {
+      // Create exception for single instance of recurring event
+      const exceptionData = {
+        ...updateData,
+        parentEventId: id,
+        instanceDate: new Date(instanceDate),
+        recurring: { enabled: false },
+        isException: true
+      };
+
+      const exceptionEvent = new Event(exceptionData);
+      const savedException = await exceptionEvent.save();
+      
+      // Include change tracking in response for notifications
+      res.json({
+        ...savedException.toObject(),
+        changes: changes,
+        isRecurringException: true
+      });
+    } else {
+      // Update the original event (for non-recurring events or series updates)
+      const updatedEvent = await Event.findByIdAndUpdate(id, updateData, {
+        new: true,
+        runValidators: true
+      });
+
+      if (!updatedEvent) {
+        return res.status(404).json({ error: 'Event not found' });
+      }
+
+      // Include change tracking in response for notifications
+      res.json({
+        ...updatedEvent.toObject(),
+        changes: changes,
+        isRecurringException: false
+      });
+    }
   } catch (error) {
     console.error('Error updating event:', error);
     res.status(500).json({ error: 'Failed to update event' });
@@ -184,18 +316,95 @@ app.put('/api/events/:id', async (req, res) => {
 app.delete('/api/events/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedEvent = await Event.findByIdAndDelete(id);
+    const event = await Event.findById(id);
 
-    if (!deletedEvent) {
+    if (!event) {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    res.json({ message: 'Event deleted successfully' });
+    if (event.isDeleted) {
+      return res.status(400).json({ error: 'Event is already deleted' });
+    }
+
+    const updatedEvent = await Event.findByIdAndUpdate(
+      id,
+      { 
+        isDeleted: true, 
+        deletedAt: new Date() 
+      },
+      { new: true }
+    );
+
+    res.json({ message: 'Event deleted successfully', event: updatedEvent });
   } catch (error) {
     console.error('Error deleting event:', error);
     res.status(500).json({ error: 'Failed to delete event' });
   }
 });
+
+app.get('/api/events/deleted', async (req, res) => {
+  try {
+    const deletedEvents = await Event.find({ 
+      isDeleted: true,
+      deletedAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+    }).sort({ deletedAt: -1 });
+    res.json(deletedEvents);
+  } catch (error) {
+    console.error('Error fetching deleted events:', error);
+    res.status(500).json({ error: 'Failed to fetch deleted events' });
+  }
+});
+
+app.post('/api/events/:id/recover', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const event = await Event.findById(id);
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    if (!event.isDeleted) {
+      return res.status(400).json({ error: 'Event is not deleted' });
+    }
+
+    const timeSinceDeleted = Date.now() - new Date(event.deletedAt).getTime();
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+
+    if (timeSinceDeleted > twentyFourHours) {
+      return res.status(400).json({ error: 'Recovery period expired (24 hours)' });
+    }
+
+    const recoveredEvent = await Event.findByIdAndUpdate(
+      id,
+      { 
+        isDeleted: false, 
+        deletedAt: null 
+      },
+      { new: true }
+    );
+
+    res.json({ message: 'Event recovered successfully', event: recoveredEvent });
+  } catch (error) {
+    console.error('Error recovering event:', error);
+    res.status(500).json({ error: 'Failed to recover event' });
+  }
+});
+
+const cleanupExpiredDeletedEvents = async () => {
+  try {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const result = await Event.deleteMany({
+      isDeleted: true,
+      deletedAt: { $lt: twentyFourHoursAgo }
+    });
+    console.log(`Cleaned up ${result.deletedCount} expired deleted events`);
+  } catch (error) {
+    console.error('Error cleaning up expired deleted events:', error);
+  }
+};
+
+setInterval(cleanupExpiredDeletedEvents, 60 * 60 * 1000);
 
 app.get('/api/teams', (req, res) => {
   const teams = [
