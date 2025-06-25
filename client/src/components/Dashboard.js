@@ -244,7 +244,7 @@ function Dashboard() {
             onClick={handleOpenModal}
             style={{
               padding: '15px 30px',
-              backgroundColor: '#007bff',
+              backgroundColor: '#478c66',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
@@ -254,8 +254,8 @@ function Dashboard() {
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
               transition: 'all 0.3s ease'
             }}
-            onMouseOver={(e) => e.target.style.backgroundColor = '#0056b3'}
-            onMouseOut={(e) => e.target.style.backgroundColor = '#007bff'}
+            onMouseOver={(e) => e.target.style.backgroundColor = '#3a7257'}
+            onMouseOut={(e) => e.target.style.backgroundColor = '#478c66'}
           >
             Create New Event
           </button>
@@ -263,8 +263,8 @@ function Dashboard() {
           <button
             style={{
               padding: '15px 30px',
-              backgroundColor: '#ffc107',
-              color: '#212529',
+              backgroundColor: '#478c66',
+              color: 'white',
               border: 'none',
               borderRadius: '8px',
               fontSize: '16px',
@@ -273,8 +273,8 @@ function Dashboard() {
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
               transition: 'all 0.3s ease'
             }}
-            onMouseOver={(e) => e.target.style.backgroundColor = '#e0a800'}
-            onMouseOut={(e) => e.target.style.backgroundColor = '#ffc107'}
+            onMouseOver={(e) => e.target.style.backgroundColor = '#3a7257'}
+            onMouseOut={(e) => e.target.style.backgroundColor = '#478c66'}
           >
             View Events
           </button>
@@ -283,7 +283,7 @@ function Dashboard() {
             onClick={toggleDeletedEvents}
             style={{
               padding: '15px 30px',
-              backgroundColor: showDeleted ? '#6c757d' : '#17a2b8',
+              backgroundColor: showDeleted ? '#3a7257' : '#478c66',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
@@ -293,8 +293,8 @@ function Dashboard() {
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
               transition: 'all 0.3s ease'
             }}
-            onMouseOver={(e) => e.target.style.backgroundColor = showDeleted ? '#5a6268' : '#138496'}
-            onMouseOut={(e) => e.target.style.backgroundColor = showDeleted ? '#6c757d' : '#17a2b8'}
+            onMouseOver={(e) => e.target.style.backgroundColor = showDeleted ? '#3a7257' : '#3a7257'}
+            onMouseOut={(e) => e.target.style.backgroundColor = showDeleted ? '#478c66' : '#478c66'}
           >
             {showDeleted ? 'Show Active Events' : 'View Deleted Events'}
           </button>
@@ -474,7 +474,7 @@ function Dashboard() {
                     style={{
                       width: '100%',
                       padding: '8px 16px',
-                      backgroundColor: '#6c757d',
+                      backgroundColor: '#478c66',
                       color: 'white',
                       border: 'none',
                       borderRadius: '6px',
@@ -483,8 +483,8 @@ function Dashboard() {
                       fontWeight: '500',
                       transition: 'background-color 0.3s ease'
                     }}
-                    onMouseOver={(e) => e.target.style.backgroundColor = '#5a6268'}
-                    onMouseOut={(e) => e.target.style.backgroundColor = '#6c757d'}
+                    onMouseOver={(e) => e.target.style.backgroundColor = '#3a7257'}
+                    onMouseOut={(e) => e.target.style.backgroundColor = '#478c66'}
                   >
                     Clear Filters
                   </button>
@@ -654,7 +654,7 @@ function Dashboard() {
                       onClick={() => handleViewDetails(event)}
                       style={{
                         padding: '8px 16px',
-                        backgroundColor: '#17a2b8',
+                        backgroundColor: '#478c66',
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
@@ -662,8 +662,8 @@ function Dashboard() {
                         cursor: 'pointer',
                         fontWeight: '500'
                       }}
-                      onMouseOver={(e) => e.target.style.backgroundColor = '#138496'}
-                      onMouseOut={(e) => e.target.style.backgroundColor = '#17a2b8'}
+                      onMouseOver={(e) => e.target.style.backgroundColor = '#3a7257'}
+                      onMouseOut={(e) => e.target.style.backgroundColor = '#478c66'}
                     >
                       View Details
                     </button>
@@ -671,7 +671,7 @@ function Dashboard() {
                       onClick={() => handleUpdateEvent(event._id)}
                       style={{
                         padding: '8px 16px',
-                        backgroundColor: '#28a745',
+                        backgroundColor: '#5DADE2',
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
@@ -679,8 +679,8 @@ function Dashboard() {
                         cursor: 'pointer',
                         fontWeight: '500'
                       }}
-                      onMouseOver={(e) => e.target.style.backgroundColor = '#218838'}
-                      onMouseOut={(e) => e.target.style.backgroundColor = '#28a745'}
+                      onMouseOver={(e) => e.target.style.backgroundColor = '#3b96d1'}
+                      onMouseOut={(e) => e.target.style.backgroundColor = '#5DADE2'}
                     >
                       Edit
                     </button>
