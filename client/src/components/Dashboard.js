@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import CreateEventModal from './CreateEventModal';
+import EventDetailsModal from './EventDetailsModal';
 import { eventAPI } from '../services/api';
 
 function Dashboard() {
@@ -8,6 +9,8 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedEventForDetails, setSelectedEventForDetails] = useState(null);
 
   useEffect(() => {
     loadEvents();
@@ -72,6 +75,16 @@ function Dashboard() {
   const formatDateTime = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleString();
+  };
+
+  const handleViewDetails = (event) => {
+    setSelectedEventForDetails(event);
+    setIsDetailsModalOpen(true);
+  };
+
+  const handleCloseDetailsModal = () => {
+    setIsDetailsModalOpen(false);
+    setSelectedEventForDetails(null);
   };
 
   const filteredEvents = events.filter(event =>
@@ -247,6 +260,23 @@ function Dashboard() {
                     justifyContent: 'flex-end'
                   }}>
                     <button
+                      onClick={() => handleViewDetails(event)}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#17a2b8',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        fontWeight: '500'
+                      }}
+                      onMouseOver={(e) => e.target.style.backgroundColor = '#138496'}
+                      onMouseOut={(e) => e.target.style.backgroundColor = '#17a2b8'}
+                    >
+                      View Details
+                    </button>
+                    <button
                       onClick={() => handleUpdateEvent(event._id)}
                       style={{
                         padding: '8px 16px',
@@ -294,6 +324,13 @@ function Dashboard() {
           onEventCreated={handleEventCreated}
           onEventUpdated={handleEventUpdated}
           selectedEvent={selectedEvent}
+        />
+      )}
+
+      {isDetailsModalOpen && (
+        <EventDetailsModal
+          event={selectedEventForDetails}
+          onClose={handleCloseDetailsModal}
         />
       )}
     </div>
