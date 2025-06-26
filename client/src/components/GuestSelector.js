@@ -119,7 +119,7 @@ const GuestSelector = ({ users, selectedGuests, onGuestsChange, selectedTeamId }
             </div>
           )}
           <div className="guest-list">
-            {users.map(user => {
+            {(users || []).map(user => {
               const isSelected = selectedGuests.some(guest => 
                 guest.type === 'user' && guest.id === user.id
               );

@@ -93,12 +93,19 @@ const CreateEventModal = ({ onClose, onEventCreated, onEventUpdated, selectedEve
       ]);
       console.log('Teams response:', teamsResponse);
       console.log('Users response:', usersResponse);
-      setTeams(teamsResponse.data);
-      setUsers(usersResponse.data);
-      console.log('Teams set:', teamsResponse.data);
-      console.log('Users set:', usersResponse.data);
+      
+      const teamsData = teamsResponse.data || teamsResponse;
+      const usersData = usersResponse.data || usersResponse;
+      
+      setTeams(Array.isArray(teamsData) ? teamsData : []);
+      setUsers(Array.isArray(usersData) ? usersData : []);
+      
+      console.log('Teams set:', Array.isArray(teamsData) ? teamsData : []);
+      console.log('Users set:', Array.isArray(usersData) ? usersData : []);
     } catch (error) {
       console.error('Error loading teams and users:', error);
+      setTeams([]);
+      setUsers([]);
     }
   };
 

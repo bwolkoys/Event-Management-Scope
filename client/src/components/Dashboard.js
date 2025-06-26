@@ -44,10 +44,12 @@ function Dashboard() {
         teamsAPI.getTeams(),
         usersAPI.getUsers()
       ]);
-      setTeams(teamsResponse.data);
-      setUsers(usersResponse.data);
+      setTeams(teamsResponse.data?.data || []);
+      setUsers(usersResponse.data?.data || []);
     } catch (error) {
       console.error('Error loading teams and users:', error);
+      setTeams([]);
+      setUsers([]);
     }
   };
 
@@ -361,7 +363,7 @@ function Dashboard() {
                     }}
                   >
                     <option value="">All Teams</option>
-                    {teams.map(team => (
+                    {teams?.map(team => (
                       <option key={team.id} value={team.id}>
                         {team.name}
                       </option>

@@ -419,9 +419,14 @@ app.get('/api/teams', (req, res) => {
 app.get('/api/users', (req, res) => {
   const users = [
     { id: 'user1', name: 'Jarrod Bowen', email: 'jarrod@example.com', teamId: 'team1' },
-    { id: 'user2', name: 'Michail Antonio', email: 'michail@example.com', teamId: 'team2' },
-    { id: 'user3', name: 'Edson Alvarez', email: 'edson@example.com', teamId: 'team3' },
-    { id: 'user4', name: 'Maxwel Cornet', email: 'Maxwel@example.com', teamId: 'team4' }
+    { id: 'user2', name: 'Michail Antonio', email: 'michail@example.com', teamId: 'team1' },
+    { id: 'user3', name: 'Edson Alvarez', email: 'edson@example.com', teamId: 'team1' },
+    { id: 'user4', name: 'Bukayo Saka', email: 'bukayo@example.com', teamId: 'team2' },
+    { id: 'user5', name: 'Gabriel Jesus', email: 'gabriel@example.com', teamId: 'team2' },
+    { id: 'user6', name: 'Ivan Toney', email: 'ivan@example.com', teamId: 'team3' },
+    { id: 'user7', name: 'Yoane Wissa', email: 'yoane@example.com', teamId: 'team3' },
+    { id: 'user8', name: 'Cole Palmer', email: 'cole@example.com', teamId: 'team4' },
+    { id: 'user9', name: 'Nicolas Jackson', email: 'nicolas@example.com', teamId: 'team4' }
   ];
   res.json(users);
 });
